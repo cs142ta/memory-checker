@@ -6,26 +6,26 @@
 #include <string>
 
 struct AllocInfo {
-    std::string file = "";
-    std::string function = "";
-    int line = 0;
+  std::string file = "";
+  std::string function = "";
+  int line = 0;
 
-    AllocInfo() {}
+  AllocInfo() {}
 
-    AllocInfo(std::string filename, std::string function, int line):
-        file(filename), function(function), line(line) {}
+  AllocInfo(std::string filename, std::string function, int line)
+      : file(filename), function(function), line(line) {}
 
-    friend std::ostream &operator<<(std::ostream &out, const AllocInfo &info) {
-        out << info.file << ":" << info.line << " in \"" << info.function << "\"";
-        return out;
-    }
+  friend std::ostream &operator<<(std::ostream &out, const AllocInfo &info) {
+    out << info.file << ":" << info.line << " in \"" << info.function << "\"";
+    return out;
+  }
 };
 
 void SetAllocInfo(const AllocInfo &info, void *ptr);
 
 template <class T> inline T *operator*(const AllocInfo &info, T *ptr) {
-    SetAllocInfo(info, ptr);
-    return ptr;
+  SetAllocInfo(info, ptr);
+  return ptr;
 }
 
 // This macro is the magic behind tracking the filename, function, and line
@@ -45,6 +45,8 @@ void track_delete(std::string filename, std::string function, int line);
 // free errors. We cannot use the same operator* trick from above because
 // delete returns void. This means we can safely call a function in a
 // separate statement before running the delete operator.
-#define delete track_delete(__FILE__, __PRETTY_FUNCTION__, __LINE__); delete
+#define delete                                                                 \
+  track_delete(__FILE__, __PRETTY_FUNCTION__, __LINE__);                       \
+  delete
 
 #endif
