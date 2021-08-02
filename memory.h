@@ -5,26 +5,31 @@
 #include <sstream>
 #include <string>
 
-struct AllocInfo {
+// Tracks information of where a new or delete occurred in a file
+struct FileInfo {
   std::string file = "";
   std::string function = "";
   int line = 0;
 
-  AllocInfo() {}
+  FileInfo() {}
 
-  AllocInfo(std::string filename, std::string function, int line)
+  FileInfo(std::string filename, std::string function, int line)
       : file(filename), function(function), line(line) {}
 
-  friend std::ostream &operator<<(std::ostream &out, const AllocInfo &info) {
+  friend std::ostream &operator<<(std::ostream &out, const FileInfo &info) {
     out << info.file << ":" << info.line << " in \"" << info.function << "\"";
     return out;
   }
 };
 
-void SetAllocInfo(const AllocInfo &info, void *ptr);
+void SetFileInfo(const FileInfo &info, void *ptr);
 
-template <class T> inline T *operator*(const AllocInfo &info, T *ptr) {
-  SetAllocInfo(info, ptr);
+// Takes an allocated pointer (from the overridden operator new in memory.cpp)
+// and passes the current file and line information to the memory tracker.
+// This allows extending the information with more context to where the
+// allocation occurred.
+template <class T> inline T *operator*(const FileInfo &info, T *ptr) {
+  SetFileInfo(info, ptr);
   return ptr;
 }
 
@@ -36,7 +41,7 @@ template <class T> inline T *operator*(const AllocInfo &info, T *ptr) {
 // overloading method to track the information on the current line. The
 // operator* function returns the pointer returned from new which allows this
 // to work anywhere new is allowed.
-#define new AllocInfo(__FILE__, __PRETTY_FUNCTION__, __LINE__) * new
+#define new FileInfo(__FILE__, __PRETTY_FUNCTION__, __LINE__) * new
 
 void track_delete(std::string filename, std::string function, int line);
 
