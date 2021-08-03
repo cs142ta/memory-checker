@@ -1,24 +1,37 @@
 #ifndef _MEMORY_H
 #define _MEMORY_H
 
+// Include all libraries here that a student would reasonably use.
+// otherwise the macros below would be expanded in the definitions
+// of new and delete that are included as dependencies of the
+// libraries below.
+#include <algorithm>
+#include <fstream>
 #include <iostream>
-#include <sstream>
 #include <string>
+#include <sstream>
+#include <vector>
+#include <limits>
+#include <iomanip>
+
+#include <stdio.h>
 
 // Tracks information of where a new or delete occurred in a file
 struct FileInfo {
-  std::string file = "";
-  std::string function = "";
+  const char *file = "";
+  const char *function = "";
   int line = 0;
 
   FileInfo() {}
 
-  FileInfo(std::string filename, std::string function, int line)
-      : file(filename), function(function), line(line) {}
+  FileInfo(const char *filename, const char *function, int line) {
+    file = filename;
+    this->function = function;
+    this->line = line;
+  }
 
-  friend std::ostream &operator<<(std::ostream &out, const FileInfo &info) {
-    out << info.file << ":" << info.line << " in \"" << info.function << "\"";
-    return out;
+  void print(const char *details) {
+    printf("  %s:%d in \"%s\": %s\n", file, line, function, details);
   }
 };
 
@@ -45,7 +58,7 @@ template <class T> inline T *operator*(const FileInfo &info, T *ptr) {
 // to work anywhere new is allowed.
 #define new FileInfo(__FILE__, __PRETTY_FUNCTION__, __LINE__) * new
 
-void track_delete(std::string filename, std::string function, int line);
+void track_delete(const char *filename, const char *function, int line);
 
 // Here we call a function to track the line that delete was called on before
 // we actually delete. This is used to warn about offending lines for double-

@@ -1,16 +1,9 @@
 #include "memory.h"
 
-// undefine new and delete macros from memory.h so defining new and delete
-// below doesn't create conflicts with the text replacements.
-#undef new
-#undef delete
-
-#include <iostream>
-#include <string>
-#include <vector>
-
-// for malloc and free
-#include <cstdlib>
+// for memmove printf malloc and free
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // A Record stores information for each allocated block of memory.
 struct Record {
@@ -24,6 +17,39 @@ struct Record {
   Record(size_t size, void *ptr) : size(size), ptr(ptr) {}
 };
 
+struct RecordList {
+  Record *records;
+  size_t size;
+  size_t capacity;
+
+  RecordList() {
+    capacity = 4;
+    records = (Record *)malloc(sizeof(Record) * capacity);
+    size = 0;
+  }
+
+  ~RecordList() { free(records); }
+
+  void add(Record r) {
+    if (size >= capacity) {
+      capacity *= 2;
+      records = (Record *)realloc(records, sizeof(Record) * capacity);
+    }
+    records[size] = r;
+    size++;
+  }
+
+  Record &get(size_t index) { return records[index]; }
+
+  void remove(size_t index) {
+    if (index < size - 1) {
+      const size_t remaining = size - index - 1;
+      memmove(&records[index], &records[index + 1], remaining * sizeof(Record));
+    }
+    size--;
+  }
+};
+
 // There is a global MemTrack object declared below (tracker)
 // which is created at the beginning of the program's execution,
 // and automaticlly destructed at the end of the program.
@@ -31,76 +57,60 @@ struct MemTrack {
   // total allocated bytes
   size_t alloced = 0;
 
-  std::vector<Record> allocated_records;
-  std::vector<Record> freed_records;
+  // lists of allocated and freed records
+  RecordList allocated;
+  RecordList freed;
 
   // track the most recent delete's line info (part of the delete
   // macro in memory.h)
   FileInfo last_delete;
 
-  // unfortunately, overriding the global new and delete operators means
-  // that any calls to new or delete in the standard library will also
-  // use the overridden operators.
-  // That means uses of vectors in this class must be protected, otherwise
-  // the uses of new and delete would create recursion where the allocation
-  // would be tracked (add_record), which calls push_back, which may call
-  // new. Any function that could potentially allocate should be guarded.
-  bool lock = false;
-
   MemTrack() {}
 
-  void print_header() {
-    std::cout << std::endl;
-    std::cout << "---------- memory checker ----------" << std::endl;
-    std::cout << std::endl;
-  }
+  void print_header() { printf("\n---------- memory checker ----------\n\n"); }
 
   // this destructor is automatically run at the end of the program.
   ~MemTrack() {
     // all memory was freed
     if (alloced == 0) {
       print_header();
-      std::cout << "no issues detected" << std::endl;
+      printf("no issues detected\n");
       return;
     }
 
     // memory leaks found!
     print_header();
-    std::cout << "LEAK SUMMARY:" << std::endl;
-    std::cout << "  leaked: " << alloced << " bytes in "
-              << allocated_records.size() << " allocations" << std::endl;
-    std::cout << std::endl;
-    std::cout << "LEAK DETAILS:" << std::endl;
-    for (Record r : allocated_records) {
-      std::cout << "  " << r.alloc_info;
-      std::cout << ": " << r.size << " bytes allocated here were never freed."
-                << std::endl;
+    printf("LEAK SUMMARY:\n");
+    printf("  leaked: %ld bytes in %d allocations\n", alloced, 12345);
+    printf("\n");
+    printf("LEAK DETAILS:\n");
+    for (size_t i = 0; i < allocated.size; i++) {
+      FileInfo info = allocated.get(i).alloc_info;
+      printf("  %s:%d in \"%s\": ", info.file, info.line, info.function);
+      printf("%ld bytes allocated here were never freed\n",
+             allocated.get(i).size);
     }
   }
 
   // Check the list of all freed pointers to see if ptr has already been freed.
-  // Because malloc() is smart, it will try to re-use addresses that have
-  // already been freed. This means we actually don't call free() anywhere in
-  // this file!
   void check_double_free(void *ptr) {
-    for (size_t i = 0; i < freed_records.size(); ++i) {
-      if (freed_records.at(i).ptr == ptr) {
+    for (size_t i = 0; i < freed.size; ++i) {
+      if (freed.get(i).ptr == ptr) {
         // double free found
-        Record r = freed_records.at(i);
+        Record r = freed.get(i);
 
         print_header();
-        std::cout << "DOUBLE-FREE SUMMARY:" << std::endl;
-        std::cout << "  attempted to free pointer " << ptr << " twice."
-                  << std::endl;
-        std::cout << std::endl;
-        std::cout << "DOUBLE-FREE DETAILS:" << std::endl;
-        std::cout << "  " << r.free_info << ": first freed here" << std::endl;
-        std::cout << "  " << last_delete << ": freed again here" << std::endl;
-        std::cout << "  " << r.alloc_info << ": allocated here" << std::endl;
+        printf("DOUBLE-FREE SUMMARY:\n");
+        printf("  attempted to free pointer %p twice.\n", ptr);
+        printf("\n");
+        printf("DOUBLE-FREE DETAILS:\n");
+        r.free_info.print("first freed here");
+        last_delete.print("freed again here");
+        r.alloc_info.print("allocated here");
 
         // _Exit must be used because exit(1) still performs cleanup and the
         // memory leak statements also print. We want to preserve the "abort
-        // on double-free" behavior from normal use of delete.
+        // on double-free" behavior from normal use of delete. */
         _Exit(1);
       }
     }
@@ -108,32 +118,24 @@ struct MemTrack {
 
   // move a record from the list of allocations to the list of frees
   void remove_freed(void *ptr) {
-    if (lock) {
-      return;
-    }
-    lock = true;
-
-    for (size_t i = 0; i < allocated_records.size(); ++i) {
-      if (allocated_records.at(i).ptr == ptr) {
+    for (size_t i = 0; i < allocated.size; ++i) {
+      if (allocated.get(i).ptr == ptr) {
         // track this record as freed for double-free warnings
-        allocated_records.at(i).free_info = last_delete;
-        freed_records.push_back(allocated_records.at(i));
+        allocated.get(i).free_info = last_delete;
+        freed.add(allocated.get(i));
 
-        alloced -= allocated_records.at(i).size;
-        allocated_records.erase(allocated_records.begin() + i);
+        alloced -= allocated.get(i).size;
+        allocated.remove(i);
         break;
       }
     }
-
-    lock = false;
   }
 
   // TODO: see if this is still needed
   void check_address_reuse(void *ptr) {
-    for (size_t i = 0; i < freed_records.size(); ++i) {
-      if (freed_records.at(i).ptr == ptr) {
-        /* std::cout << "Removing already used pointer " << ptr << std::endl; */
-        freed_records.erase(freed_records.begin() + i);
+    for (size_t i = 0; i < freed.size; ++i) {
+      if (freed.get(i).ptr == ptr) {
+        freed.remove(i);
         break;
       }
     }
@@ -141,23 +143,16 @@ struct MemTrack {
 
   // Add a record to the list of allocations
   void add_record(size_t size, void *ptr) {
-    if (lock) {
-      return;
-    }
-    lock = true;
-
     check_address_reuse(ptr);
-    allocated_records.push_back(Record(size, ptr));
+    allocated.add(Record(size, ptr));
     alloced += size;
-
-    lock = false;
   }
 
   // attaches the file & line information to a record.
   void extend_record_info(const FileInfo &info, void *ptr) {
-    for (size_t i = 0; i < allocated_records.size(); ++i) {
-      if (allocated_records.at(i).ptr == ptr) {
-        allocated_records.at(i).alloc_info = info;
+    for (size_t i = 0; i < allocated.size; ++i) {
+      if (allocated.get(i).ptr == ptr) {
+        allocated.get(i).alloc_info = info;
       }
     }
   }
@@ -176,9 +171,14 @@ void SetFileInfo(const FileInfo &info, void *ptr) {
 // Runs before operator delete (on the same line) and sets the last_delete
 // of the tracker to the FileInfo of that line. Otherwise there is no way
 // to know where a delete occurred.
-void track_delete(std::string filename, std::string function, int line) {
+void track_delete(const char *filename, const char *function, int line) {
   tracker.track_delete(FileInfo(filename, function, line));
 }
+
+// undefine new and delete macros from memory.h so defining new and delete
+// below doesn't create conflicts with the text replacements.
+#undef new
+#undef delete
 
 // The following override the global new and delete operators.
 // It probably isn't needed in CS142 to override the [] variants,
@@ -186,7 +186,6 @@ void track_delete(std::string filename, std::string function, int line) {
 void *operator new(size_t size) {
   void *ptr = malloc(size);
   if (ptr == NULL) {
-    throw std::bad_alloc();
   }
   tracker.add_record(size, ptr);
   return ptr;
@@ -195,7 +194,6 @@ void *operator new(size_t size) {
 void *operator new[](size_t size) {
   void *ptr = malloc(size);
   if (ptr == NULL) {
-    throw std::bad_alloc();
   }
   tracker.add_record(size, ptr);
   return ptr;
@@ -203,10 +201,13 @@ void *operator new[](size_t size) {
 
 void operator delete(void *ptr) noexcept {
   tracker.check_double_free(ptr);
+  // why can't we free here?
+  /* free(ptr); */
   tracker.remove_freed(ptr);
 }
 
 void operator delete[](void *ptr) noexcept {
   tracker.check_double_free(ptr);
+  /* free(ptr); */
   tracker.remove_freed(ptr);
 }
