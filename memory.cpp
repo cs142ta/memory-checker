@@ -55,20 +55,12 @@ struct MemTrack {
     std::cout << std::endl;
   }
 
-  /* TODO: This may not be necessary with zybooks... */
-  void print_footer() {
-    std::cout << std::endl;
-    std::cout << "------------------------------------" << std::endl;
-    std::cout << std::endl;
-  }
-
   // this destructor is automatically run at the end of the program.
   ~MemTrack() {
     // all memory was freed
     if (alloced == 0) {
       print_header();
       std::cout << "no issues detected" << std::endl;
-      print_footer();
       return;
     }
 
@@ -84,7 +76,6 @@ struct MemTrack {
       std::cout << ": " << r.size << " bytes allocated here were never freed."
                 << std::endl;
     }
-    print_footer();
   }
 
   // Check the list of all freed pointers to see if ptr has already been freed.
@@ -106,7 +97,6 @@ struct MemTrack {
         std::cout << "  " << r.free_info << ": first freed here" << std::endl;
         std::cout << "  " << last_delete << ": freed again here" << std::endl;
         std::cout << "  " << r.alloc_info << ": allocated here" << std::endl;
-        print_footer();
 
         // _Exit must be used because exit(1) still performs cleanup and the
         // memory leak statements also print. We want to preserve the "abort
