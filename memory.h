@@ -22,6 +22,8 @@ struct FileInfo {
   }
 };
 
+// The function to attach FileInfo to a allocated pointer is defined in
+// memory.cpp so it can access the memory tracker.
 void SetFileInfo(const FileInfo &info, void *ptr);
 
 // Takes an allocated pointer (from the overridden operator new in memory.cpp)

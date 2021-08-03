@@ -88,8 +88,9 @@ struct MemTrack {
   }
 
   // Check the list of all freed pointers to see if ptr has already been freed.
-  // Because malloc() is smart, it will try to re-use addresses that have already
-  // been freed. This means we actually don't call free() anywhere in this file!
+  // Because malloc() is smart, it will try to re-use addresses that have
+  // already been freed. This means we actually don't call free() anywhere in
+  // this file!
   void check_double_free(void *ptr) {
     for (size_t i = 0; i < freed_records.size(); ++i) {
       if (freed_records.at(i).ptr == ptr) {
@@ -171,9 +172,7 @@ struct MemTrack {
     }
   }
 
-  void track_delete(FileInfo info) {
-    last_delete = info;
-  }
+  void track_delete(FileInfo info) { last_delete = info; }
 };
 
 static MemTrack tracker;
@@ -184,12 +183,15 @@ void SetFileInfo(const FileInfo &info, void *ptr) {
   tracker.extend_record_info(info, ptr);
 }
 
+// Runs before operator delete (on the same line) and sets the last_delete
+// of the tracker to the FileInfo of that line. Otherwise there is no way
+// to know where a delete occurred.
 void track_delete(std::string filename, std::string function, int line) {
   tracker.track_delete(FileInfo(filename, function, line));
 }
 
 // The following override the global new and delete operators.
-// It probably isn't needed in cs142 to override the [] variants,
+// It probably isn't needed in CS142 to override the [] variants,
 // but it doesn't hurt either.
 void *operator new(size_t size) {
   void *ptr = malloc(size);
