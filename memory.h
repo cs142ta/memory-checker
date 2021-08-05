@@ -14,6 +14,46 @@
 #include <limits>
 #include <iomanip>
 
+// pass -D _MEMCHECK_ALL_INCLUDES to the commandline flags to enable
+// these extra includes. In theory they should not be required for
+// cs142 use, but this define makes it easy to enable if needed.
+// Making these optional by default shortens compile time by a
+// second on a fast machine.
+#ifdef _MEMCHECK_ALL_INCLUDES
+#include <array>
+#include <bitset>
+#include <chrono>
+#include <deque>
+#include <codecvt>
+#include <complex>
+#include <exception>
+#include <forward_list>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
+#include <list>
+#include <locale>
+#include <map>
+#include <memory>
+#include <new>
+#include <numeric>
+#include <queue>
+#include <random>
+#include <ratio>
+#include <regex>
+#include <set>
+#include <stack>
+#include <stdexcept>
+#include <system_error>
+#include <tuple>
+#include <typeindex>
+#include <typeinfo>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <valarray>
+#endif
+
 #include <stdio.h>
 
 // Tracks information of where a new or delete occurred in a file
