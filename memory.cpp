@@ -90,6 +90,14 @@ struct MemTrack {
              "'delete'\n",
              allocated.get(i).size);
     }
+
+    // free all remaining memory
+    for (size_t i = 0; i < allocated.size; i++) {
+      free(allocated.get(i).ptr);
+    }
+    for (size_t i = 0; i < freed.size; i++) {
+      free(freed.get(i).ptr);
+    }
   }
 
   // Check the list of all freed pointers to see if ptr has already been freed.
@@ -200,14 +208,14 @@ void *operator new[](size_t size) {
 }
 
 void operator delete(void *ptr) noexcept {
-  printf("inside operator delete %p\n", ptr);
   tracker.check_double_free(ptr);
-  // free(ptr);
+  // This is where memory should be freed, but due to some undefined
+  // behavior, we don't free until the end of the program.
+  // See the readme for the rationale behind this decision.
   tracker.remove_freed(ptr);
 }
 
 void operator delete[](void *ptr) noexcept {
   tracker.check_double_free(ptr);
-  // free(ptr);
   tracker.remove_freed(ptr);
 }
