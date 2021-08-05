@@ -56,15 +56,14 @@
 
 #include <stdio.h>
 
-// Tracks information of where a new or delete occurred in a file
-struct FileInfo {
+struct SourceLocation {
   const char *file = "";
   const char *function = "";
   int line = 0;
 
-  FileInfo() {}
+  SourceLocation() {}
 
-  FileInfo(const char *filename, const char *function, int line) {
+  SourceLocation(const char *filename, const char *function, int line) {
     file = filename;
     this->function = function;
     this->line = line;
@@ -75,16 +74,16 @@ struct FileInfo {
   }
 };
 
-// The function to attach FileInfo to a allocated pointer is defined in
+// The function to attach SourceLocation to a allocated pointer is defined in
 // memory.cpp so it can access the memory tracker.
-void SetFileInfo(const FileInfo &info, void *ptr);
+void SetSourceLocation(const SourceLocation &info, void *ptr);
 
 // Takes an allocated pointer (from the overridden operator new in memory.cpp)
 // and passes the current file and line information to the memory tracker.
 // This allows extending the information with more context to where the
 // allocation occurred.
-template <class T> inline T *operator*(const FileInfo &info, T *ptr) {
-  SetFileInfo(info, ptr);
+template <class T> inline T *operator*(const SourceLocation &info, T *ptr) {
+  SetSourceLocation(info, ptr);
   return ptr;
 }
 
@@ -96,7 +95,7 @@ template <class T> inline T *operator*(const FileInfo &info, T *ptr) {
 // overloading method to track the information on the current line. The
 // operator* function returns the pointer returned from new which allows this
 // to work anywhere new is allowed.
-#define new FileInfo(__FILE__, __PRETTY_FUNCTION__, __LINE__) * new
+#define new SourceLocation(__FILE__, __PRETTY_FUNCTION__, __LINE__) * new
 
 void track_delete(const char *filename, const char *function, int line);
 

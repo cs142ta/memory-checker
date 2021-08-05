@@ -5,14 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-// A Record stores information for each allocated block of memory.
 struct Record {
   size_t size;
   void *ptr;
   // where was this allocated?
-  FileInfo alloc_info;
+  SourceLocation alloc;
   // where was this first freed?
-  FileInfo free_info;
+  SourceLocation free;
 
   Record(size_t size, void *ptr) : size(size), ptr(ptr) {}
 };
@@ -61,9 +60,8 @@ struct MemTrack {
   RecordList allocated;
   RecordList freed;
 
-  // track the most recent delete's line info (part of the delete
-  // macro in memory.h)
-  FileInfo last_delete;
+  // track the location of the most recent delete
+  SourceLocation last_delete;
 
   MemTrack() {}
 
@@ -85,9 +83,11 @@ struct MemTrack {
     printf("\n");
     printf("LEAK DETAILS:\n");
     for (size_t i = 0; i < allocated.size; i++) {
-      FileInfo info = allocated.get(i).alloc_info;
-      printf("  %s:%d in \"%s\": ", info.file, info.line, info.function);
-      printf("%ld bytes allocated here were never freed\n",
+      SourceLocation location = allocated.get(i).alloc;
+      printf("  %s:%d in \"%s\": ", location.file, location.line,
+             location.function);
+      printf("%ld bytes allocated with 'new' here were never freed with "
+             "'delete'\n",
              allocated.get(i).size);
     }
   }
@@ -101,12 +101,12 @@ struct MemTrack {
 
         print_header();
         printf("DOUBLE-FREE SUMMARY:\n");
-        printf("  attempted to free pointer %p twice.\n", ptr);
+        printf("  attempted to free address %p with 'delete' twice.\n", ptr);
         printf("\n");
         printf("DOUBLE-FREE DETAILS:\n");
-        r.free_info.print("first freed here");
-        last_delete.print("freed again here");
-        r.alloc_info.print("allocated here");
+        r.alloc.print("allocated with 'new' here");
+        r.free.print("first freed with 'delete' here");
+        last_delete.print("freed again with 'delete' here");
 
         // _Exit must be used because exit(1) still performs cleanup and the
         // memory leak statements also print. We want to preserve the "abort
@@ -121,7 +121,7 @@ struct MemTrack {
     for (size_t i = 0; i < allocated.size; ++i) {
       if (allocated.get(i).ptr == ptr) {
         // track this record as freed for double-free warnings
-        allocated.get(i).free_info = last_delete;
+        allocated.get(i).free = last_delete;
         freed.add(allocated.get(i));
 
         alloced -= allocated.get(i).size;
@@ -148,31 +148,31 @@ struct MemTrack {
     alloced += size;
   }
 
-  // attaches the file & line information to a record.
-  void extend_record_info(const FileInfo &info, void *ptr) {
+  // attaches the file & line location to a record.
+  void extend_record_location(const SourceLocation &location, void *ptr) {
     for (size_t i = 0; i < allocated.size; ++i) {
       if (allocated.get(i).ptr == ptr) {
-        allocated.get(i).alloc_info = info;
+        allocated.get(i).alloc = location;
       }
     }
   }
 
-  void track_delete(FileInfo info) { last_delete = info; }
+  void track_delete(SourceLocation location) { last_delete = location; }
 };
 
 static MemTrack tracker;
 
 // ptr has already been allocated and is in the tracker
-// this function exists to attach additional info to the record
-void SetFileInfo(const FileInfo &info, void *ptr) {
-  tracker.extend_record_info(info, ptr);
+// this function exists to attach additional location to the record
+void SetSourceLocation(const SourceLocation &location, void *ptr) {
+  tracker.extend_record_location(location, ptr);
 }
 
 // Runs before operator delete (on the same line) and sets the last_delete
-// of the tracker to the FileInfo of that line. Otherwise there is no way
+// of the tracker to the SourceLocation of that line. Otherwise there is no way
 // to know where a delete occurred.
 void track_delete(const char *filename, const char *function, int line) {
-  tracker.track_delete(FileInfo(filename, function, line));
+  tracker.track_delete(SourceLocation(filename, function, line));
 }
 
 // undefine new and delete macros from memory.h so defining new and delete
@@ -200,14 +200,14 @@ void *operator new[](size_t size) {
 }
 
 void operator delete(void *ptr) noexcept {
+  printf("inside operator delete %p\n", ptr);
   tracker.check_double_free(ptr);
-  // why can't we free here?
-  /* free(ptr); */
+  // free(ptr);
   tracker.remove_freed(ptr);
 }
 
 void operator delete[](void *ptr) noexcept {
   tracker.check_double_free(ptr);
-  /* free(ptr); */
+  // free(ptr);
   tracker.remove_freed(ptr);
 }
