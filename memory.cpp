@@ -110,7 +110,7 @@ struct MemTrack {
 
         print_header();
         printf("DOUBLE-FREE SUMMARY:\n");
-        printf("  attempted to free address %p with 'delete' twice.\n", ptr);
+        printf("  freed memory at address %p with 'delete' twice.\n", ptr);
         printf("\n");
         printf("DOUBLE-FREE DETAILS:\n");
         r.alloc.print("allocated with 'new' here");
