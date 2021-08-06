@@ -55,6 +55,7 @@ struct RecordList {
 struct MemTrack {
   // total allocated bytes
   size_t alloced = 0;
+  size_t total_alloced = 0;
 
   // lists of allocated and freed records
   RecordList allocated;
@@ -79,7 +80,7 @@ struct MemTrack {
     // memory leaks found!
     print_header();
     printf("LEAK SUMMARY:\n");
-    printf("  leaked: %ld bytes in %d allocations\n", alloced, 12345);
+    printf("  leaked: %ld bytes in %ld allocations\n", alloced, total_alloced);
     printf("\n");
     printf("LEAK DETAILS:\n");
     for (size_t i = 0; i < allocated.size; i++) {
@@ -154,6 +155,7 @@ struct MemTrack {
     check_address_reuse(ptr);
     allocated.add(Record(size, ptr));
     alloced += size;
+    total_alloced += size;
   }
 
   // attaches the file & line location to a record.
