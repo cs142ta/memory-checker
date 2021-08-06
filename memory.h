@@ -7,12 +7,12 @@
 // libraries below.
 #include <algorithm>
 #include <fstream>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <limits>
 #include <iomanip>
+#include <iostream>
+#include <limits>
+#include <sstream>
+#include <string>
+#include <vector>
 
 // pass -D _MEMCHECK_ALL_INCLUDES to the commandline flags to enable
 // these extra includes. In theory they should not be required for
@@ -23,9 +23,9 @@
 #include <array>
 #include <bitset>
 #include <chrono>
-#include <deque>
 #include <codecvt>
 #include <complex>
+#include <deque>
 #include <exception>
 #include <forward_list>
 #include <functional>
@@ -46,9 +46,9 @@
 #include <stdexcept>
 #include <system_error>
 #include <tuple>
+#include <type_traits>
 #include <typeindex>
 #include <typeinfo>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <valarray>
