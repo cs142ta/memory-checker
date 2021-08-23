@@ -174,7 +174,7 @@ static MemTrack tracker;
 
 // ptr has already been allocated and is in the tracker
 // this function exists to attach additional location to the record
-void SetSourceLocation(const SourceLocation &location, void *ptr) {
+void set_source_location(const SourceLocation &location, void *ptr) {
   tracker.extend_record_location(location, ptr);
 }
 

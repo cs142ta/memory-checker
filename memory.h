@@ -76,14 +76,14 @@ struct SourceLocation {
 
 // The function to attach SourceLocation to a allocated pointer is defined in
 // memory.cpp so it can access the memory tracker.
-void SetSourceLocation(const SourceLocation &info, void *ptr);
+void set_source_location(const SourceLocation &info, void *ptr);
 
 // Takes an allocated pointer (from the overridden operator new in memory.cpp)
 // and passes the current file and line information to the memory tracker.
 // This allows extending the information with more context to where the
 // allocation occurred.
 template <class T> inline T *operator*(const SourceLocation &info, T *ptr) {
-  SetSourceLocation(info, ptr);
+  set_source_location(info, ptr);
   return ptr;
 }
 
