@@ -64,12 +64,19 @@ struct MemTrack {
   // track the location of the most recent delete
   SourceLocation last_delete;
 
+  // send output to stdout
+  bool do_print = true;
+
   MemTrack() {}
 
   void print_header() { printf("\n---------- memory checker ----------\n\n"); }
 
   // this destructor is automatically run at the end of the program.
   ~MemTrack() {
+    if (!do_print) {
+      return;
+    }
+
     // all memory was freed
     if (alloced == 0) {
       print_header();
@@ -108,14 +115,16 @@ struct MemTrack {
         // double free found
         Record r = freed.get(i);
 
-        print_header();
-        printf("DOUBLE-FREE SUMMARY:\n");
-        printf("  freed memory at address %p with 'delete' twice.\n", ptr);
-        printf("\n");
-        printf("DOUBLE-FREE DETAILS:\n");
-        r.alloc.print("allocated with 'new' here");
-        r.free.print("first freed with 'delete' here");
-        last_delete.print("freed again with 'delete' here");
+        if (do_print) {
+          print_header();
+          printf("DOUBLE-FREE SUMMARY:\n");
+          printf("  freed memory at address %p with 'delete' twice.\n", ptr);
+          printf("\n");
+          printf("DOUBLE-FREE DETAILS:\n");
+          r.alloc.print("allocated with 'new' here");
+          r.free.print("first freed with 'delete' here");
+          last_delete.print("freed again with 'delete' here");
+        }
 
         // _Exit must be used because exit(1) still performs cleanup and the
         // memory leak statements also print. We want to preserve the "abort
@@ -171,6 +180,10 @@ struct MemTrack {
 };
 
 static MemTrack tracker;
+
+void diable_memcheck_output() {
+  tracker.do_print = false;
+}
 
 // ptr has already been allocated and is in the tracker
 // this function exists to attach additional location to the record
