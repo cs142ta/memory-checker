@@ -92,11 +92,10 @@ struct MemTrack {
     printf("LEAK DETAILS:\n");
     for (size_t i = 0; i < allocated.size; i++) {
       SourceLocation location = allocated.get(i).alloc;
-      printf("  %s:%d in \"%s\": ", location.file, location.line,
-             location.function);
-      printf("%ld bytes allocated with 'new' here were never freed with "
-             "'delete'\n",
+      printf("  %ld bytes were never freed with 'delete'\n",
              allocated.get(i).size);
+      printf("    (allocated with 'new' at %s:%d in \"%s\")\n", location.file, location.line,
+             location.function);
     }
 
     // free all remaining memory
@@ -118,7 +117,7 @@ struct MemTrack {
         if (do_print) {
           print_header();
           printf("DOUBLE-FREE SUMMARY:\n");
-          printf("  freed memory at address %p with 'delete' twice.\n", ptr);
+          printf("  freed memory with 'delete' twice.\n");
           printf("\n");
           printf("DOUBLE-FREE DETAILS:\n");
           r.alloc.print("allocated with 'new' here");
@@ -181,9 +180,7 @@ struct MemTrack {
 
 static MemTrack tracker;
 
-void diable_memcheck_output() {
-  tracker.do_print = false;
-}
+void diable_memcheck_output() { tracker.do_print = false; }
 
 // ptr has already been allocated and is in the tracker
 // this function exists to attach additional location to the record
