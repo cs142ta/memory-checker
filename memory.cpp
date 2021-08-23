@@ -180,7 +180,7 @@ struct MemTrack {
 
 static MemTrack tracker;
 
-void diable_memcheck_output() { tracker.do_print = false; }
+void disable_memcheck_output() { tracker.do_print = false; }
 
 // ptr has already been allocated and is in the tracker
 // this function exists to attach additional location to the record

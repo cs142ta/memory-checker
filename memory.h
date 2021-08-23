@@ -76,7 +76,7 @@ struct SourceLocation {
 
 // Calling this function disables stdout output from the memory checker. This is
 // used to disable memory check prints on the style unit tests.
-void diable_memcheck_output();
+void disable_memcheck_output();
 
 // The function to attach SourceLocation to a allocated pointer is defined in
 // memory.cpp so it can access the memory tracker.
