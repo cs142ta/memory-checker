@@ -54,7 +54,6 @@ struct RecordList {
 // and automaticlly destructed at the end of the program.
 struct MemTrack {
   // total allocated bytes
-  size_t alloced = 0;
   size_t total_alloced = 0;
 
   // lists of allocated and freed records
@@ -77,6 +76,18 @@ struct MemTrack {
       return;
     }
 
+    // some allocations made by the standard library could be
+    // left in the allocations list. In that case we don't want to warn the
+    // student because there will be no line or file information to present
+    // and the log message will only confuse them
+    size_t alloced = 0;
+    for (size_t i = 0; i < allocated.size; i++) {
+      SourceLocation location = allocated.get(i).alloc;
+      if (location.line != 0) {
+        alloced += allocated.get(i).size;
+      }
+    }
+
     // all memory was freed
     if (alloced == 0) {
       print_header();
@@ -92,6 +103,10 @@ struct MemTrack {
     printf("LEAK DETAILS:\n");
     for (size_t i = 0; i < allocated.size; i++) {
       SourceLocation location = allocated.get(i).alloc;
+      if (location.line == 0) {
+        continue;
+      }
+
       printf("  %ld bytes were never freed with 'delete'\n",
              allocated.get(i).size);
       printf("    (allocated with 'new' at %s:%d in \"%s\")\n", location.file, location.line,
@@ -141,7 +156,6 @@ struct MemTrack {
         allocated.get(i).free = last_delete;
         freed.add(allocated.get(i));
 
-        alloced -= allocated.get(i).size;
         allocated.remove(i);
         break;
       }
@@ -162,7 +176,6 @@ struct MemTrack {
   void add_record(size_t size, void *ptr) {
     check_address_reuse(ptr);
     allocated.add(Record(size, ptr));
-    alloced += size;
     total_alloced += size;
   }
 
